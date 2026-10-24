@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Encaixe Científico</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; outline: none; image-rendering: crisp-edges; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="tela" width="256" height="224" tabindex="0"></canvas>
+<script>
+/*
+ * Encaixe Científico — releitura de Tetris com mulheres na ciência.
+ *  - Um único HTML, sem rede (só lê o questoes.json do pacote), sem armazenamento (RJ-01, RJ-02, RJ-18).
+ *  - Resolução interna 256x224, escalada em número inteiro, paleta fixa de 16 cores (RJ-11).
+ *  - Só as teclas canônicas, sem auto-repeat do sistema, no máximo duas juntas (RJ-15, RJ-16).
+ *  - Partida curta: relógio de 170 s, nunca passa de 3 minutos (RJ-08).
+ *  - O conhecimento é a moeda do jogo (RJ-10): a cada 5 peças vem uma pergunta ENTRE as peças.
+ *      Acertou -> você escolhe a próxima peça (3 opções) e ganha pontos.
+ *      Errou   -> o jogo escolhe a peça, você perde alguns pontos e vê a resposta certa (RJ-14).
+ *    Errar nunca encerra a partida.
+ *  - Quem guarda placar e apelido é o fliperama (RJ-18): o jogo só emite o PLACAR no fim.
+ */
+(() => {
+'use strict';
+
+// ---------- Constantes ----------
+const L = 256, A = 224, FPS = 60;
+const JOGO = 'encaixe-cientifico', VERSAO = '1.0.0', TEMA = 'Mulheres na Ciência';
+const COLS = 10, LINS = 20, CEL = 10, BX = 8, BY = 12;   // tabuleiro 10x20, célula de 10 px
+const TEMPO_TOTAL = 170;       // segundos de partida (limite do curso: 180)
+const PECAS_POR_QUIZ = 5;      // uma pergunta a cada 5 peças
+const MAX_QUIZ = 8;
+const SEG_QUIZ = 12;           // tempo para responder (enunciado de fliperama: poucos segundos)
+const SEG_ESCOLHA = 8;         // tempo para escolher a peça
+const ACERTO_BASE = 200;
+const ERRO_PENA = 50;
+
+// Paleta fixa de 16 cores (limite do curso: 32). Sem gradiente, sem anti-aliasing.
+const PAL = ['#000000', '#1d2b53', '#7e2553', '#008751', '#ab5236', '#5f574f', '#c2c3c7', '#fff1e8',
+             '#ff004d', '#ffa300', '#ffec27', '#00e436', '#29adff', '#83769c', '#ff77a8', '#ffccaa'];
+const C = { preto: 0, azulEscuro: 1, ameixa: 2, verde: 3, marrom: 4, cinza: 5, cinzaClaro: 6, branco: 7,
+            vermelho: 8, laranja: 9, amarelo: 10, lima: 11, azul: 12, lavanda: 13, rosa: 14 };
+const LETRAS = ['A', 'B', 'C', 'D'];
+
+const cv = document.getElementById('tela');
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+// ---------- Fonte bitmap 5x7 (sem anti-aliasing, legível de longe) ----------
+const FONTE_TXT = {
+  'A': '.###.|#...#|#...#|#####|#...#|#...#|#...#', 'B': '####.|#...#|#...#|####.|#...#|#...#|####.',
+  'C': '.###.|#...#|#....|#....|#....|#...#|.###.', 'D': '####.|#...#|#...#|#...#|#...#|#...#|####.',
+  'E': '#####|#....|#....|####.|#....|#....|#####', 'F': '#####|#....|#....|####.|#....|#....|#....',
+  'G': '.###.|#...#|#....|#.###|#...#|#...#|.###.', 'H': '#...#|#...#|#...#|#####|#...#|#...#|#...#',
+  'I': '.###.|..#..|..#..|..#..|..#..|..#..|.###.', 'J': '..###|...#.|...#.|...#.|...#.|#..#.|.##..',
+  'K': '#...#|#..#.|#.#..|##...|#.#..|#..#.|#...#', 'L': '#....|#....|#....|#....|#....|#....|#####',
+  'M': '#...#|##.##|#.#.#|#.#.#|#...#|#...#|#...#', 'N': '#...#|##..#|#.#.#|#..##|#...#|#...#|#...#',
+  'O': '.###.|#...#|#...#|#...#|#...#|#...#|.###.', 'P': '####.|#...#|#...#|####.|#....|#....|#....',
+  'Q': '.###.|#...#|#...#|#...#|#.#.#|#..#.|.##.#', 'R': '####.|#...#|#...#|####.|#.#..|#..#.|#...#',
+  'S': '.####|#....|#....|.###.|....#|....#|####.', 'T': '#####|..#..|..#..|..#..|..#..|..#..|..#..',
+  'U': '#...#|#...#|#...#|#...#|#...#|#...#|.###.', 'V': '#...#|#...#|#...#|#...#|#...#|.#.#.|..#..',
+  'W': '#...#|#...#|#...#|#.#.#|#.#.#|##.##|#...#', 'X': '#...#|#...#|.#.#.|..#..|.#.#.|#...#|#...#',
+  'Y': '#...#|#...#|.#.#.|..#..|..#..|..#..|..#..', 'Z': '#####|....#|...#.|..#..|.#...|#....|#####',
+  '0': '.###.|#...#|#..##|#.#.#|##..#|#...#|.###.', '1': '..#..|.##..|..#..|..#..|..#..|..#..|.###.',
+  '2': '.###.|#...#|....#|...#.|..#..|.#...|#####', '3': '#####|...#.|..#..|...#.|....#|#...#|.###.',
+  '4': '...#.|..##.|.#.#.|#..#.|#####|...#.|...#.', '5': '#####|#....|####.|....#|....#|#...#|.###.',
+  '6': '..##.|.#...|#....|####.|#...#|#...#|.###.', '7': '#####|....#|...#.|..#..|.#...|.#...|.#...',
+  '8': '.###.|#...#|#...#|.###.|#...#|#...#|.###.', '9': '.###.|#...#|#...#|.####|....#|...#.|.##..',
+  '?': '.###.|#...#|....#|...#.|..#..|.....|..#..', '!': '..#..|..#..|..#..|..#..|..#..|.....|..#..',
+  '.': '.....|.....|.....|.....|.....|.....|..#..', ',': '.....|.....|.....|.....|..#..|..#..|.#...',
+  ':': '.....|..#..|.....|.....|..#..|.....|.....', '-': '.....|.....|.....|#####|.....|.....|.....',
+  '+': '.....|..#..|..#..|#####|..#..|..#..|.....', '/': '....#|....#|...#.|..#..|.#...|#....|#....',
+  '%': '##..#|##.#.|...#.|..#..|.#...|.#.##|#..##', '(': '...#.|..#..|.#...|.#...|.#...|..#..|...#.',
+  ')': '.#...|..#..|...#.|...#.|...#.|..#..|.#...', ' ': '.....|.....|.....|.....|.....|.....|.....',
+};
+const FONTE = {};
+for (const k of Object.keys(FONTE_TXT)) FONTE[k] = FONTE_TXT[k].split('|');
+// Acentos: pixels (coluna, linha) relativos ao glifo; linhas negativas ficam acima dele.
+const MARCAS = {
+  '\u0301': [[3, -2], [2, -1]],                         // agudo
+  '\u0300': [[1, -2], [2, -1]],                         // grave
+  '\u0302': [[2, -2], [1, -1], [3, -1]],                // circunflexo
+  '\u0303': [[0, -1], [1, -2], [2, -1], [3, -2], [4, -1]], // til
+  '\u0327': [[2, 7], [1, 8]],                           // cedilha
+};
+
+function pintar(cor, x, y, w, h) {   // sempre em pixels inteiros
+  ctx.fillStyle = PAL[cor];
+  ctx.fillRect(x | 0, y | 0, w | 0, h | 0);
+}
+
+function largura(txt, s) { return txt.length * 6 * s - s; }
+
+function texto(txt, x, y, s, cor, alin) {
+  txt = String(txt);
+  if (alin === 'c') x = Math.floor((L - largura(txt, s)) / 2);
+  else if (alin === 'r') x = x - largura(txt, s);
+  for (let i = 0; i < txt.length; i++) {
+    const d = txt[i].normalize('NFD');
+    const linhas = FONTE[d[0].toUpperCase()] || FONTE['?'];
+    const gx = x + i * 6 * s;
+    for (let r = 0; r < 7; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (linhas[r][c] === '#') pintar(cor, gx + c * s, y + r * s, s, s);
+      }
+    }
+    for (const m of d.slice(1)) {
+      for (const [px, py] of (MARCAS[m] || [])) pintar(cor, gx + px * s, y + py * s, s, s);
+    }
+  }
+}
+
+function quebrar(txt, max) {
+  const l = []; let a = '';
+  for (const p of txt.split(' ')) {
+    if (!a) a = p;
+    else if ((a + ' ' + p).length <= max) a += ' ' + p;
+    else { l.push(a); a = p; }
+  }
+  if (a) l.push(a);
+  return l;
+}
+
+
+// ---------- Peças (arte própria: blocos com luz e sombra) ----------
+// Cada peça é uma matriz; girar = girar a matriz. Cores: uma por peça.
+const TIPOS = [
+  { m: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], cor: C.azul,    luz: C.branco,  sombra: C.azulEscuro }, // barra
+  { m: [[1, 1], [1, 1]],                                         cor: C.amarelo, luz: C.branco,  sombra: C.laranja },    // quadrado
+  { m: [[0, 1, 0], [1, 1, 1], [0, 0, 0]],                        cor: C.lavanda, luz: C.branco,  sombra: C.azulEscuro }, // T
+  { m: [[0, 1, 1], [1, 1, 0], [0, 0, 0]],                        cor: C.lima,    luz: C.branco,  sombra: C.verde },      // S
+  { m: [[1, 1, 0], [0, 1, 1], [0, 0, 0]],                        cor: C.vermelho, luz: C.rosa,   sombra: C.ameixa },     // Z
+  { m: [[1, 0, 0], [1, 1, 1], [0, 0, 0]],                        cor: C.rosa,    luz: C.branco,  sombra: C.ameixa },     // J
+  { m: [[0, 0, 1], [1, 1, 1], [0, 0, 0]],                        cor: C.laranja, luz: C.amarelo, sombra: C.marrom },     // L
+];
+
+function girarM(m) {                        // gira 90° no sentido horário
+  const n = m.length;
+  const r = Array.from({ length: n }, () => Array(n).fill(0));
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) r[i][j] = m[n - 1 - j][i];
+  return r;
+}
+function topoM(m) {                          // primeira linha da matriz que tem bloco
+  for (let i = 0; i < m.length; i++) if (m[i].some((v) => v)) return i;
+  return 0;
+}
+
+function bloco(x, y, cel, t) {               // um bloco com luz (cima/esquerda) e sombra (baixo/direita)
+  pintar(t.cor, x, y, cel, cel);
+  pintar(t.luz, x, y, cel, 1);
+  pintar(t.luz, x, y + 1, 1, cel - 1);
+  pintar(t.sombra, x, y + cel - 1, cel, 1);
+  pintar(t.sombra, x + cel - 1, y + 1, 1, cel - 1);
+}
+function matriz(m, x, y, cel, t) {
+  for (let i = 0; i < m.length; i++) for (let j = 0; j < m[i].length; j++) if (m[i][j]) bloco(x + j * cel, y + i * cel, cel, t);
+}
+function matrizCentrada(m, cx, cy, cel, t) { // desenha a peça centrada em (cx, cy), sem os vazios das bordas
+  let x0 = 9, x1 = -1, y0 = 9, y1 = -1;
+  m.forEach((lin, i) => lin.forEach((v, j) => { if (v) { x0 = Math.min(x0, j); x1 = Math.max(x1, j); y0 = Math.min(y0, i); y1 = Math.max(y1, i); } }));
+  const w = (x1 - x0 + 1) * cel, h = (y1 - y0 + 1) * cel;
+  const sub = m.slice(y0, y1 + 1).map((lin) => lin.slice(x0, x1 + 1));
+  matriz(sub, Math.round(cx - w / 2), Math.round(cy - h / 2), cel, t);
+}
+
+// ---------- Estado ----------
+let fase = 'carregando';    // carregando | titulo | jogo | fim | erro
+let quadro = 0;
+let banco = null;
+let apelidoInicial = null;  // vindo de ARCADE_INIT; só para exibir (RJ-18)
+let P = null;               // partida
+let Q = null;               // pergunta em andamento
+let FB = null;              // feedback da pergunta
+let E = null;               // escolha da peça
+let fim = null;
+let saco = [];
+const teclas = new Set();   // teclas físicas seguradas (no máximo 2)
+const das = { esq: 0, dir: 0 };
+
+// ---------- Teclado: só as teclas canônicas ----------
+const NOME_TECLA = { ArrowLeft: 'esquerda', ArrowRight: 'direita', ArrowUp: 'cima', ArrowDown: 'baixo',
+                     Space: 'acao', KeyZ: 'acao', KeyX: 'acao2', Enter: 'enter' };
+
+window.addEventListener('keydown', (e) => {
+  const nome = NOME_TECLA[e.code];
+  if (!nome) return;                       // qualquer outra tecla é ignorada
+  e.preventDefault();
+  if (e.repeat) return;                    // auto-repeat do sistema nunca vira ação (RJ-16)
+  if (!teclas.has(e.code) && teclas.size >= 2) return; // no máximo duas juntas (RJ-16)
+  teclas.add(e.code);
+  if (nome === 'esquerda') das.esq = 0;
+  if (nome === 'direita') das.dir = 0;
+  aoApertar(nome);
+});
+window.addEventListener('keyup', (e) => { teclas.delete(e.code); });
+window.addEventListener('blur', () => { teclas.clear(); });
+
+// ---------- Mensagens do fliperama ----------
+window.addEventListener('message', (e) => {
+  if (e.source !== window.parent) return;
+  const d = e.data;
+  if (d && d.tipo === 'ARCADE_INIT' && typeof d.jogador === 'string' && /^[A-Z0-9]{1,9}$/.test(d.jogador)) {
+    apelidoInicial = d.jogador;            // só para mostrar na tela; o jogo não guarda nada
+  }
+});
+
+function enviarPlacar() {
+  window.parent.postMessage({
+    tipo: 'PLACAR', jogo: JOGO, versao: VERSAO,
+    pontos: Math.max(0, Math.round(P.pontos)),
+    duracao_s: Math.min(TEMPO_TOTAL, Math.round(P.quadros / FPS)),
+    acertos: P.acertos, erros: P.erros, tema: TEMA,
+  }, '*');
+}
+
+// ---------- Perguntas ----------
+function embaralhar(v) {
+  const a = v.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+fetch('questoes.json')
+  .then((r) => { if (!r.ok) throw new Error('http'); return r.json(); })
+  .then((d) => {
+    const ok = d && Array.isArray(d.questoes) && d.questoes.length >= MAX_QUIZ &&
+      d.questoes.every((q) => Array.isArray(q.alternativas) && q.alternativas.length >= 2 && q.alternativas.length <= 4);
+    if (!ok) throw new Error('formato');
+    banco = d.questoes.map((q) => ({
+      id: q.id, enunciado: q.enunciado.normalize('NFC'), correta: q.correta,
+      alternativas: q.alternativas.map((a) => a.normalize('NFC')),
+      explicacao: q.explicacao.normalize('NFC'),
+    }));
+    fase = 'titulo';
+  })
+  .catch(() => { fase = 'erro'; });
+
+// ---------- Tabuleiro ----------
+function proxTipo() {                        // "saco" de 7: todas as peças aparecem, sem sequência injusta
+  if (!saco.length) saco = embaralhar([0, 1, 2, 3, 4, 5, 6]);
+  return saco.pop();
+}
+function novaPeca(t) {
+  const m = TIPOS[t].m.map((l) => l.slice());
+  return { t, m, x: Math.floor((COLS - m.length) / 2), y: -topoM(m) };
+}
+function colide(m, x, y) {
+  for (let i = 0; i < m.length; i++) {
+    for (let j = 0; j < m[i].length; j++) {
+      if (!m[i][j]) continue;
+      const gx = x + j, gy = y + i;
+      if (gx < 0 || gx >= COLS || gy >= LINS) return true;
+      if (gy >= 0 && P.grade[gy][gx]) return true;
+    }
+  }
+  return false;
+}
+function nivel() { return Math.min(8, 1 + Math.floor(P.linhas / 3)); }
+
+function iniciarPartida() {
+  saco = [];
+  P = { pontos: 0, acertos: 0, erros: 0, linhas: 0, quadros: 0, restante: TEMPO_TOTAL * FPS, pecas: 0, quizN: 0,
+        grade: Array.from({ length: LINS }, () => Array(COLS).fill(0)),
+        perguntas: embaralhar(banco).slice(0, MAX_QUIZ), // sorteadas, sem repetir
+        cur: null, prox: proxTipo(), sub: 'cai', grav: 0, limpa: null, aviso: null };
+  Q = null; FB = null; E = null;
+  nascer(null);
+  fase = 'jogo';
+}
+
+function nascer(tipoForcado) {
+  let t = tipoForcado;
+  if (t === null || t === undefined) { t = P.prox; P.prox = proxTipo(); }
+  P.cur = novaPeca(t);
+  P.grav = 0; das.esq = 0; das.dir = 0;
+  P.sub = 'cai';
+  if (colide(P.cur.m, P.cur.x, P.cur.y)) {   // pilha cheia: limpa a metade de cima, perde pontos, e segue
+    for (let r = 0; r < LINS / 2; r++) P.grade[r].fill(0);
+    P.pontos = Math.max(0, P.pontos - 100);
+    P.aviso = { txt: 'PILHA CHEIA! -100', t: 120 };
+    P.cur = novaPeca(t);
+  }
+}
+
+function travar() {
+  const c = P.cur;
+  for (let i = 0; i < c.m.length; i++) for (let j = 0; j < c.m[i].length; j++) {
+    if (c.m[i][j] && c.y + i >= 0) P.grade[c.y + i][c.x + j] = c.t + 1;
+  }
+  P.pecas++;
+  const cheias = [];
+  for (let r = 0; r < LINS; r++) if (P.grade[r].every((v) => v)) cheias.push(r);
+  if (cheias.length) { P.sub = 'limpa'; P.limpa = { linhas: cheias, t: 0 }; }
+  else depoisDaPeca();
+}
+
+function depoisDaPeca() {
+  if (P.pecas % PECAS_POR_QUIZ === 0 && P.quizN < MAX_QUIZ && P.quizN < P.perguntas.length) abrirQuiz();
+  else nascer(null);
+}
+
+function terminarLimpeza() {
+  const n = P.limpa.linhas.length;
+  P.grade = P.grade.filter((_, r) => !P.limpa.linhas.includes(r));
+  while (P.grade.length < LINS) P.grade.unshift(Array(COLS).fill(0));
+  P.pontos += [0, 100, 300, 500, 800][n] * nivel();
+  P.linhas += n;
+  P.limpa = null;
+  depoisDaPeca();
+}
+
+// ---------- Pergunta (entre as peças, nunca no meio da queda) ----------
+function abrirQuiz() {
+  const q = P.perguntas[P.quizN];
+  P.quizN++;
+  Q = { q, ordem: embaralhar(q.alternativas.map((_, i) => i)), sel: 0, restante: SEG_QUIZ * FPS, total: SEG_QUIZ * FPS, guarda: 40 };
+  P.sub = 'quiz';
+}
+
+function responder(pos) {                    // pos === null: acabou o tempo
+  const acertou = pos !== null && Q.ordem[pos] === Q.q.correta;
+  let delta;
+  if (acertou) { delta = ACERTO_BASE + Math.round(Q.restante / Q.total * 10) * 10; P.acertos++; }
+  else { delta = -Math.min(ERRO_PENA, P.pontos); P.erros++; }   // errar custa pontos, nunca a partida
+  P.pontos += delta;
+  FB = { acertou, tempo: pos === null, delta, guarda: acertou ? 40 : 150, auto: 600 };
+  P.sub = 'fb';
+}
+
+function depoisDoFeedback() {
+  if (FB.acertou) {
+    E = { opts: embaralhar([0, 1, 2, 3, 4, 5, 6]).slice(0, 3), sel: 1, restante: SEG_ESCOLHA * FPS, total: SEG_ESCOLHA * FPS };
+    P.sub = 'escolha';
+  } else {
+    nascer(null);                            // errou: o jogo escolhe a peça
+  }
+}
+
+function terminarPartida() {
+  fase = 'fim';
+  fim = { pontos: P.pontos, acertos: P.acertos, erros: P.erros, linhas: P.linhas, guarda: 90 };
+  enviarPlacar();
+}
+
+// ---------- Ações das teclas ----------
+function mover(dx) { if (!colide(P.cur.m, P.cur.x + dx, P.cur.y)) { P.cur.x += dx; return true; } return false; }
+function girar(horario) {
+  let m = P.cur.m;
+  m = horario ? girarM(m) : girarM(girarM(girarM(m)));
+  for (const dx of [0, -1, 1, -2, 2]) {      // "chute" na parede: tenta deslocar de lado para caber
+    if (!colide(m, P.cur.x + dx, P.cur.y)) { P.cur.m = m; P.cur.x += dx; return; }
+  }
+}
+function quedaDura() {
+  while (!colide(P.cur.m, P.cur.x, P.cur.y + 1)) { P.cur.y++; P.pontos += 2; }
+  travar();
+}
+
+function aoApertar(nome) {
+  if (fase === 'titulo') {
+    if (nome === 'enter' || nome === 'acao') iniciarPartida();
+  } else if (fase === 'jogo') {
+    if (P.sub === 'cai') {
+      if (nome === 'esquerda') mover(-1);
+      else if (nome === 'direita') mover(1);
+      else if (nome === 'cima') girar(true);
+      else if (nome === 'acao2') girar(false);
+      else if (nome === 'acao') quedaDura();
+    } else if (P.sub === 'quiz') {
+      if (Q.guarda > 0) return;              // evita responder sem querer: o jogador vinha apertando teclas
+      const n = Q.q.alternativas.length;
+      if (nome === 'cima') Q.sel = (Q.sel + n - 1) % n;
+      else if (nome === 'baixo') Q.sel = (Q.sel + 1) % n;
+      else if (nome === 'enter') responder(Q.sel);
+    } else if (P.sub === 'fb') {
+      if (FB.guarda <= 0 && nome === 'enter') depoisDoFeedback();
+    } else if (P.sub === 'escolha') {
+      if (nome === 'esquerda') E.sel = (E.sel + 2) % 3;
+      else if (nome === 'direita') E.sel = (E.sel + 1) % 3;
+      else if (nome === 'enter') nascer(E.opts[E.sel]);
+    }
+  } else if (fase === 'fim') {
+    if (fim.guarda <= 0 && nome === 'enter') iniciarPartida();
+  }
+}
+
+// ---------- Atualização (60 quadros por segundo) ----------
+function atualizar() {
+  quadro++;
+  if (fase === 'jogo') {
+    P.quadros++;
+    if (--P.restante <= 0) { terminarPartida(); return; }
+    if (P.aviso && --P.aviso.t <= 0) P.aviso = null;
+    if (P.sub === 'cai') {
+      // O jogo cria o seu próprio ritmo de repetição ao segurar ← →, sem usar o auto-repeat do sistema.
+      const e = teclas.has('ArrowLeft'), d = teclas.has('ArrowRight');
+      if (e && !d) { das.esq++; if (das.esq > 12 && (das.esq - 12) % 4 === 0) mover(-1); } else das.esq = 0;
+      if (d && !e) { das.dir++; if (das.dir > 12 && (das.dir - 12) % 4 === 0) mover(1); } else das.dir = 0;
+      const rapido = teclas.has('ArrowDown');
+      const intervalo = rapido ? 3 : Math.max(6, 48 - 5 * (nivel() - 1));
+      if (++P.grav >= intervalo) {
+        P.grav = 0;
+        if (!colide(P.cur.m, P.cur.x, P.cur.y + 1)) { P.cur.y++; if (rapido) P.pontos++; }
+        else travar();
+      }
+    } else if (P.sub === 'limpa') {
+      if (++P.limpa.t >= 16) terminarLimpeza();
+    } else if (P.sub === 'quiz') {
+      if (Q.guarda > 0) Q.guarda--;
+      if (--Q.restante <= 0) responder(null);
+    } else if (P.sub === 'fb') {
+      if (FB.guarda > 0) FB.guarda--;
+      if (--FB.auto <= 0) depoisDoFeedback();
+    } else if (P.sub === 'escolha') {
+      if (--E.restante <= 0) nascer(E.opts[E.sel]);
+    }
+  } else if (fase === 'fim') {
+    if (fim.guarda > 0) fim.guarda--;
+  }
+}
+
+// ---------- Desenho ----------
+function piscando() { return Math.floor(quadro / 30) % 2 === 0; }
+function relogio(frames) {
+  const s = Math.max(0, Math.ceil(frames / FPS));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function barra(x, y, w, frac) {
+  pintar(C.cinza, x, y, w, 4);
+  pintar(frac > 0.5 ? C.lima : frac > 0.25 ? C.amarelo : C.vermelho, x, y, Math.floor(w * Math.max(0, frac)), 4);
+}
+function fundoLab() {                         // azulejos do laboratório, discretos
+  for (let y = 0; y < A; y += 16) for (let x = (y / 16 % 2) * 16; x < L; x += 32) pintar(C.azulEscuro, x, y, 16, 16);
+}
+
+function desenharTabuleiro() {
+  pintar(C.cinza, BX - 2, BY - 2, COLS * CEL + 4, LINS * CEL + 4);
+  pintar(C.preto, BX, BY, COLS * CEL, LINS * CEL);
+  for (let r = 0; r < LINS; r++) for (let c = 0; c < COLS; c++) {
+    const v = P.grade[r][c];
+    if (v) bloco(BX + c * CEL, BY + r * CEL, CEL, TIPOS[v - 1]);
+    else pintar(C.azulEscuro, BX + c * CEL + 4, BY + r * CEL + 4, 1, 1);
+  }
+  if (P.sub === 'limpa') {                    // as linhas completas piscam antes de sumir
+    const cor = Math.floor(P.limpa.t / 4) % 2 === 0 ? C.branco : C.amarelo;
+    for (const r of P.limpa.linhas) pintar(cor, BX, BY + r * CEL, COLS * CEL, CEL);
+  }
+  if (P.sub === 'cai') {
+    const c = P.cur;
+    let gy = c.y;
+    while (!colide(c.m, c.x, gy + 1)) gy++;
+    if (gy !== c.y) {                         // sombra de onde a peça vai cair (contorno de 1 px)
+      for (let i = 0; i < c.m.length; i++) for (let j = 0; j < c.m[i].length; j++) {
+        if (!c.m[i][j] || gy + i < 0) continue;
+        const x = BX + (c.x + j) * CEL, y = BY + (gy + i) * CEL;
+        pintar(C.cinza, x, y, CEL, 1); pintar(C.cinza, x, y + CEL - 1, CEL, 1);
+        pintar(C.cinza, x, y, 1, CEL); pintar(C.cinza, x + CEL - 1, y, 1, CEL);
+      }
+    }
+    for (let i = 0; i < c.m.length; i++) for (let j = 0; j < c.m[i].length; j++) {
+      if (c.m[i][j] && c.y + i >= 0) bloco(BX + (c.x + j) * CEL, BY + (c.y + i) * CEL, CEL, TIPOS[c.t]);
+    }
+  }
+  if (P.aviso) {
+    pintar(C.preto, BX, BY + 84, COLS * CEL, 32);
+    pintar(C.vermelho, BX, BY + 84, COLS * CEL, 2);
+    pintar(C.vermelho, BX, BY + 114, COLS * CEL, 2);
+    quebrar(P.aviso.txt, 12).forEach((ln, i) => texto(ln, BX + 4, BY + 91 + i * 12, 1, C.branco));
+  }
+}
+
+function desenharPainel() {
+  const X = 120;
+  pintar(C.preto, 114, 0, L - 114, A);
+  pintar(C.cinza, 114, 0, 2, A);
+  texto('PONTOS', X, 12, 2, C.cinzaClaro);
+  texto(String(P.pontos), X, 28, 3, C.amarelo);
+  texto('TEMPO', X, 56, 2, C.cinzaClaro);
+  texto(relogio(P.restante), X, 72, 3, P.restante < 20 * FPS ? C.vermelho : C.branco);
+  texto('PRÓXIMA', X, 100, 2, C.cinzaClaro);
+  pintar(C.cinza, X, 116, 52, 36);
+  pintar(C.preto, X + 1, 117, 50, 34);
+  matrizCentrada(TIPOS[P.prox].m, X + 26, 134, 8, TIPOS[P.prox]);
+  texto('LINHAS ' + P.linhas, X, 160, 2, C.branco);
+  texto('ACERTOS ' + P.acertos, X, 176, 2, C.lima);
+  texto('QUIZ', X, 196, 2, C.cinzaClaro);
+  const feitas = P.pecas % PECAS_POR_QUIZ;
+  for (let i = 0; i < PECAS_POR_QUIZ; i++) {
+    pintar(C.cinza, X + 54 + i * 14, 197, 10, 10);
+    pintar(i < feitas ? C.amarelo : C.preto, X + 55 + i * 14, 198, 8, 8);
+  }
+}
+
+function desenharPergunta() {
+  pintar(C.preto, 0, 0, L, A);
+  texto('PERGUNTA ' + P.quizN, 4, 6, 2, C.amarelo);
+  texto(String(Math.ceil(Q.restante / FPS)), L - 4, 6, 2, C.branco, 'r');
+  barra(4, 24, 248, Q.restante / Q.total);
+  quebrar(Q.q.enunciado, 21).forEach((ln, i) => texto(ln, 4, 36 + i * 16, 2, C.branco));
+  Q.ordem.forEach((alt, i) => {
+    const y = 92 + i * 26, sel = i === Q.sel;
+    if (sel) { pintar(C.amarelo, 2, y - 4, 252, 22); pintar(C.azulEscuro, 3, y - 3, 250, 20); }
+    texto(LETRAS[i], 8, y, 2, sel ? C.amarelo : C.azul);
+    texto(Q.q.alternativas[alt], 26, y, 2, sel ? C.amarelo : C.branco);
+  });
+  texto('CIMA/BAIXO ESCOLHE  ENTER CONFIRMA', 0, 212, 1, C.cinzaClaro, 'c');
+}
+
+function desenharFeedback() {
+  pintar(C.preto, 0, 0, L, A);
+  const certa = Q.q.alternativas[Q.q.correta];
+  if (FB.acertou) {
+    texto('CERTO!', 0, 10, 3, C.lima, 'c');
+    texto('+' + FB.delta + ' PONTOS', 0, 38, 2, C.amarelo, 'c');
+  } else {
+    texto(FB.tempo ? 'TEMPO!' : 'ERROU!', 0, 10, 3, FB.tempo ? C.laranja : C.vermelho, 'c');
+    texto((FB.delta === 0 ? '0' : FB.delta) + ' PONTOS', 0, 38, 2, C.branco, 'c');
+  }
+  texto('RESPOSTA:', 0, 62, 2, C.cinzaClaro, 'c');
+  quebrar(certa, 21).forEach((ln, i) => texto(ln, 0, 84 + i * 18, 2, C.lima, 'c'));
+  quebrar(Q.q.explicacao, 21).forEach((ln, i) => texto(ln, 4, 118 + i * 16, 2, C.branco));
+  texto(FB.acertou ? 'VOCÊ ESCOLHE A PEÇA!' : 'O JOGO ESCOLHE A PEÇA', 0, 186, 2, C.amarelo, 'c');
+  if (FB.guarda <= 0 && piscando()) texto('ENTER: CONTINUAR', 0, 206, 2, C.lima, 'c');
+}
+
+function desenharEscolha() {
+  pintar(C.preto, 0, 0, L, A);
+  texto('ESCOLHA A PEÇA', 0, 16, 2, C.amarelo, 'c');
+  barra(4, 40, 248, E.restante / E.total);
+  E.opts.forEach((t, i) => {
+    const cx = 48 + i * 80, sel = i === E.sel;
+    pintar(sel ? C.amarelo : C.cinza, cx - 30, 70, 60, 60);
+    pintar(C.preto, cx - 28, 72, 56, 56);
+    matrizCentrada(TIPOS[t].m, cx, 100, 12, TIPOS[t]);
+  });
+  texto('SETAS ESCOLHEM', 0, 160, 2, C.branco, 'c');
+  texto('ENTER CONFIRMA', 0, 180, 2, C.lima, 'c');
+}
+
+function desenharJogo() {
+  fundoLab();
+  desenharTabuleiro();
+  desenharPainel();
+  if (P.sub === 'quiz') desenharPergunta();
+  else if (P.sub === 'fb') desenharFeedback();
+  else if (P.sub === 'escolha') desenharEscolha();
+}
+
+function desenharTitulo() {
+  fundoLab();
+  for (let i = 0; i < 7; i++) {               // peças caindo ao fundo, só enfeite
+    const x = i % 2 ? 6 + (i * 13) % 30 : L - 40 - (i * 11) % 24;
+    const y = (quadro / 2 + i * 41) % (A + 40) - 30;
+    matriz(TIPOS[i].m, x, Math.floor(y), 6, TIPOS[i]);
+  }
+  pintar(C.preto, 28, 8, 200, 84);
+  texto('ENCAIXE', 0, 14, 3, C.amarelo, 'c');
+  texto('CIENTÍFICO', 0, 42, 3, C.amarelo, 'c');
+  texto('MULHERES NA CIÊNCIA', 0, 74, 2, C.rosa, 'c');
+  pintar(C.preto, 14, 100, 228, 94);
+  texto('SETAS MOVEM', 0, 106, 2, C.branco, 'c');
+  texto('CIMA GIRA A PEÇA', 0, 122, 2, C.branco, 'c');
+  texto('ESPAÇO DERRUBA', 0, 138, 2, C.branco, 'c');
+  texto('QUIZ A CADA 5 PEÇAS', 0, 158, 2, C.amarelo, 'c');
+  texto('ACERTE E ESCOLHA A PEÇA', 0, 174, 1, C.cinzaClaro, 'c');
+  if (apelidoInicial) texto('OLÁ, ' + apelidoInicial + '!', 0, 198, 2, C.azul, 'c');
+  if (piscando()) texto('APERTE ENTER', 0, 206, 2, C.lima, 'c');
+}
+
+function desenharFim() {
+  fundoLab();
+  pintar(C.preto, 14, 8, 228, 208);
+  texto('FIM DE JOGO', 0, 16, 3, C.amarelo, 'c');
+  if (apelidoInicial) texto(apelidoInicial, 0, 46, 2, C.branco, 'c');
+  texto('PONTOS', 0, 72, 2, C.cinzaClaro, 'c');
+  texto(String(fim.pontos), 0, 92, 3, C.amarelo, 'c');
+  texto('ACERTOS ' + fim.acertos, 0, 128, 2, C.lima, 'c');
+  texto('ERROS ' + fim.erros, 0, 146, 2, C.vermelho, 'c');
+  texto('LINHAS ' + fim.linhas, 0, 164, 2, C.branco, 'c');
+  texto('PLACAR ENVIADO!', 0, 186, 2, C.azul, 'c');
+  if (piscando() && fim.guarda <= 0) texto('ENTER: JOGAR DE NOVO', 0, 202, 2, C.lima, 'c');
+}
+
+function desenhar() {
+  pintar(C.preto, 0, 0, L, A);
+  if (fase === 'carregando') texto('CARREGANDO...', 0, 104, 2, C.branco, 'c');
+  else if (fase === 'erro') {
+    texto('NÃO FOI POSSÍVEL', 0, 88, 2, C.vermelho, 'c');
+    texto('CARREGAR O JOGO.', 0, 108, 2, C.branco, 'c');
+  }
+  else if (fase === 'titulo') desenharTitulo();
+  else if (fase === 'jogo') desenharJogo();
+  else if (fase === 'fim') desenharFim();
+}
+
+// ---------- Tela e laço ----------
+function ajustar() {
+  let s = Math.floor(Math.min(window.innerWidth / L, window.innerHeight / A));
+  if (s < 1) s = Math.min(window.innerWidth / L, window.innerHeight / A); // tela minúscula: reduz sem cortar
+  cv.style.width = (L * s) + 'px';
+  cv.style.height = (A * s) + 'px';
+}
+window.addEventListener('resize', ajustar);
+ajustar();
+window.focus();
+cv.focus();
+
+let ultimo = 0, acc = 0;
+function laco(t) {
+  if (!ultimo) ultimo = t;
+  acc += Math.min(100, t - ultimo);
+  ultimo = t;
+  while (acc >= 1000 / FPS) { atualizar(); acc -= 1000 / FPS; }
+  desenhar();
+  window.requestAnimationFrame(laco);
+}
+window.requestAnimationFrame(laco);
+})();
+</script>
+</body>
+</html>

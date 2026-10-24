@@ -1,0 +1,14 @@
+{
+  "id": "encaixe-cientifico",
+  "nome": "Encaixe Científico",
+  "versao": "1.0.0",
+  "autores": ["Eliabe Loureiro","Isac Victor","Pedro Paglioni"],
+  "descricao": "Encaixe as peças, responda ao quiz e conheça grandes cientistas.",
+  "controles": "Setas movem, cima gira, espaço derruba, Enter confirma.",
+  "entrada": "index.html",
+  "capa": "capa.png",
+  "classico_referencia": "Tetris",
+  "mecanica": "encaixe",
+  "tema": "Mulheres na Ciência",
+  "questoes": "questoes.json"
+}

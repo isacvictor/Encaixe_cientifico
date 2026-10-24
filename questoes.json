@@ -1,0 +1,318 @@
+{
+  "tema": "Mulheres na Ciência",
+  "nivel": "ensino médio",
+  "questoes": [
+    {
+      "id": "e01",
+      "enunciado": "Quem refutou a paridade em 1956?",
+      "alternativas": [
+        "Lise Meitner",
+        "Chien-Shiung Wu",
+        "Emmy Noether",
+        "Vera Rubin"
+      ],
+      "correta": 1,
+      "explicacao": "Wu mostrou, com cobalto-60, que a paridade não se conserva.",
+      "fonte": "https://pt.wikipedia.org/wiki/Chien-Shiung_Wu"
+    },
+    {
+      "id": "e02",
+      "enunciado": "Quem venceu o Nobel 1963: núcleo em camadas. ?",
+      "alternativas": [
+        "Irène Joliot-Curie",
+        "M. Goeppert Mayer",
+        "Marie Curie",
+        "Lise Meitner"
+      ],
+      "correta": 1,
+      "explicacao": "Maria Goeppert Mayer criou o modelo de camadas do núcleo.",
+      "fonte": "https://pt.wikipedia.org/wiki/Maria_Goeppert-Mayer"
+    },
+    {
+      "id": "e03",
+      "enunciado": "Filha de Marie Curie e ganhou o Nobel 1935?",
+      "alternativas": [
+        "Ève Curie",
+        "Ada Yonath",
+        "Irène Joliot-Curie",
+        "Dorothy Hodgkin"
+      ],
+      "correta": 2,
+      "explicacao": "Irène e o marido criaram elementos radioativos artificiais.",
+      "fonte": "https://pt.wikipedia.org/wiki/Irène_Joliot-Curie"
+    },
+    {
+      "id": "e04",
+      "enunciado": "Ada Yonath mapeou qual parte da célula?",
+      "alternativas": [
+        "Mitocôndria",
+        "Ribossomo",
+        "Cloroplasto",
+        "Lisossomo"
+      ],
+      "correta": 1,
+      "explicacao": "Ela revelou o ribossomo, que fabrica proteínas. Nobel 2009.",
+      "fonte": "https://pt.wikipedia.org/wiki/Ada_Yonath"
+    },
+    {
+      "id": "e05",
+      "enunciado": "Nobel de Blackburn: estudou o quê?",
+      "alternativas": [
+        "Mitocôndrias",
+        "Ribossomos",
+        "Vacinas",
+        "Telômeros"
+      ],
+      "correta": 3,
+      "explicacao": "Telômeros são as pontas dos cromossomos e protegem o DNA.",
+      "fonte": "https://pt.wikipedia.org/wiki/Elizabeth_Blackburn"
+    },
+    {
+      "id": "e06",
+      "enunciado": "NGF ajuda a crescer qual célula?",
+      "alternativas": [
+        "Óssea",
+        "Nervosa",
+        "Muscular",
+        "Da pele"
+      ],
+      "correta": 1,
+      "explicacao": "Levi-Montalcini descobriu o NGF e ganhou o Nobel em 1986.",
+      "fonte": "https://pt.wikipedia.org/wiki/Rita_Levi-Montalcini"
+    },
+    {
+      "id": "e07",
+      "enunciado": "Annie Cannon classificou o quê?",
+      "alternativas": [
+        "Fósseis",
+        "Plantas",
+        "Cometas",
+        "Estrelas"
+      ],
+      "correta": 3,
+      "explicacao": "Ela classificou centenas de milhares de estrelas por tipo.",
+      "fonte": "https://pt.wikipedia.org/wiki/Annie_Jump_Cannon"
+    },
+    {
+      "id": "e08",
+      "enunciado": "Cecilia Payne: estrelas, de quê?",
+      "alternativas": [
+        "Ferro",
+        "Hidrogênio",
+        "Carbono",
+        "Oxigênio"
+      ],
+      "correta": 1,
+      "explicacao": "Payne mostrou, em 1925, que hidrogênio e hélio dominam.",
+      "fonte": "https://pt.wikipedia.org/wiki/Cecilia_Payne-Gaposchkin"
+    },
+    {
+      "id": "e09",
+      "enunciado": "Caroline Herschel descobriu vários:",
+      "alternativas": [
+        "Vulcões",
+        "Cometas",
+        "Bactérias",
+        "Fósseis"
+      ],
+      "correta": 1,
+      "explicacao": "Ela descobriu oito cometas e muitos objetos do céu profundo.",
+      "fonte": "https://pt.wikipedia.org/wiki/Caroline_Herschel"
+    },
+    {
+      "id": "e10",
+      "enunciado": "Que linguagem Dorothy Vaughan aprendeu na NASA para treinar uma equipe?",
+      "alternativas": [
+        "COBOL",
+        "BASIC",
+        "Pascal",
+        "FORTRAN"
+      ],
+      "correta": 3,
+      "explicacao": "Ela aprendeu FORTRAN e treinou a sua equipe de matemáticas.",
+      "fonte": "https://pt.wikipedia.org/wiki/Dorothy_Vaughan"
+    },
+    {
+      "id": "e11",
+      "enunciado": "Primeira engenheira negra da NASA?",
+      "alternativas": [
+        "Mary Jackson",
+        "Mae Jemison",
+        "Sally Ride",
+        "Dorothy Vaughan"
+      ],
+      "correta": 0,
+      "explicacao": "Mary Jackson começou como matemática e virou engenheira, em 1958.",
+      "fonte": "https://en.wikipedia.org/wiki/Mary_Jackson_(aerospace_engineer)"
+    },
+    {
+      "id": "e12",
+      "enunciado": "Quem foi a primeira astronauta dos EUA?",
+      "alternativas": [
+        "Mae Jemison",
+        "Peggy Whitson",
+        "Sally Ride",
+        "Judith Resnik"
+      ],
+      "correta": 2,
+      "explicacao": "Sally Ride voou no ônibus espacial Challenger, em 1983.",
+      "fonte": "https://pt.wikipedia.org/wiki/Sally_Ride"
+    },
+    {
+      "id": "e13",
+      "enunciado": "o quê Marie Tharp mapeou ?",
+      "alternativas": [
+        "Fundo dos oceanos",
+        "Cavernas",
+        "Vulcões da Lua",
+        "Rios da Amazônia"
+      ],
+      "correta": 0,
+      "explicacao": "Seus mapas mostraram a dorsal no meio do Oceano Atlântico.",
+      "fonte": "https://pt.wikipedia.org/wiki/Marie_Tharp"
+    },
+    {
+      "id": "e14",
+      "enunciado": "o quê Wangari Maathai plantou ?",
+      "alternativas": [
+        "Milho",
+        "Árvores",
+        "Algodão",
+        "Cana"
+      ],
+      "correta": 1,
+      "explicacao": "Nobel da Paz 2004: o Cinturão Verde plantou milhões de árvores.",
+      "fonte": "https://pt.wikipedia.org/wiki/Wangari_Maathai"
+    },
+    {
+      "id": "e15",
+      "enunciado": "Fixação de nitrogênio na soja: quem?",
+      "alternativas": [
+        "Graziela Barroso",
+        "Bertha Lutz",
+        "Johanna Döbereiner",
+        "Nise da Silveira"
+      ],
+      "correta": 2,
+      "explicacao": "Johanna Döbereiner estudou bactérias que fixam nitrogênio.",
+      "fonte": "https://pt.wikipedia.org/wiki/Johanna_D%C3%B6bereiner"
+    },
+    {
+      "id": "e16",
+      "enunciado": "Graziela Barroso: qual ciência?",
+      "alternativas": [
+        "Astronomia",
+        "Botânica",
+        "Química",
+        "Paleontologia"
+      ],
+      "correta": 1,
+      "explicacao": "Foi uma das maiores botânicas do Brasil e estudou plantas.",
+      "fonte": "https://pt.wikipedia.org/wiki/Graziela_Maciel_Barroso"
+    },
+    {
+      "id": "e17",
+      "enunciado": "Mayana Zatz pesquisa qual área?",
+      "alternativas": [
+        "Geologia",
+        "Astronomia",
+        "Genética",
+        "Engenharia"
+      ],
+      "correta": 2,
+      "explicacao": "Ela estuda doenças genéticas e células-tronco, na USP.",
+      "fonte": "https://pt.wikipedia.org/wiki/Mayana_Zatz"
+    },
+    {
+      "id": "e18",
+      "enunciado": "Primeira negra doutora em Física?",
+      "alternativas": [
+        "Marcia Barbosa",
+        "Sonia Guimarães",
+        "Johanna Döbereiner",
+        "Nise da Silveira"
+      ],
+      "correta": 1,
+      "explicacao": "Sonia Guimarães foi a primeira no Brasil. Hoje ensina no ITA.",
+      "fonte": "https://pt.wikipedia.org/wiki/Sonia_Guimar%C3%A3es"
+    },
+    {
+      "id": "e19",
+      "enunciado": "Márcia Barbosa estuda qual substância?",
+      "alternativas": [
+        "Ouro",
+        "Petróleo",
+        "Hélio",
+        "Água"
+      ],
+      "correta": 3,
+      "explicacao": "Ela estuda as anomalias da água, um líquido fora do comum.",
+      "fonte": "https://pt.wikipedia.org/wiki/M%C3%A1rcia_Barbosa"
+    },
+    {
+      "id": "e20",
+      "enunciado": "Primeira mulher com Nobel de Medicina?",
+      "alternativas": [
+        "Levi-Montalcini",
+        "Gertrude Elion",
+        "Gerty Cori",
+        "Ada Yonath"
+      ],
+      "correta": 2,
+      "explicacao": "Gerty Cori ganhou em 1947 por estudar o uso da glicose.",
+      "fonte": "https://pt.wikipedia.org/wiki/Gerty_Cori"
+    },
+    {
+      "id": "e21",
+      "enunciado": "Barré-Sinoussi descobriu qual vírus?",
+      "alternativas": [
+        "Zika",
+        "Ebola",
+        "Dengue",
+        "HIV"
+      ],
+      "correta": 3,
+      "explicacao": "Ela ajudou a descobrir o HIV, causador da Aids, em 1983.",
+      "fonte": "https://pt.wikipedia.org/wiki/Fran%C3%A7oise_Barr%C3%A9-Sinoussi"
+    },
+    {
+      "id": "e22",
+      "enunciado": "Frances Arnold evoluiu o quê?",
+      "alternativas": [
+        "Rochas",
+        "Enzimas",
+        "Plásticos",
+        "Metais"
+      ],
+      "correta": 1,
+      "explicacao": "Nobel de Química 2018: ela evoluiu enzimas em laboratório.",
+      "fonte": "https://pt.wikipedia.org/wiki/Frances_Arnold"
+    },
+    {
+      "id": "e23",
+      "enunciado": "Donna Strickland e os pulsos de quê?",
+      "alternativas": [
+        "Som",
+        "Raios X",
+        "Laser",
+        "Calor"
+      ],
+      "correta": 2,
+      "explicacao": "Nobel de Física 2018: pulsos de laser ultracurtos e potentes.",
+      "fonte": "https://pt.wikipedia.org/wiki/Donna_Strickland"
+    },
+    {
+      "id": "e24",
+      "enunciado": "Andrea Ghez achou buraco negro onde?",
+      "alternativas": [
+        "Na Lua",
+        "Na Via Láctea",
+        "No Sol",
+        "Em Júpiter"
+      ],
+      "correta": 1,
+      "explicacao": "Está no centro da nossa galáxia e pesa milhões de sóis.",
+      "fonte": "https://pt.wikipedia.org/wiki/Andrea_Ghez"
+    }
+  ]
+}
